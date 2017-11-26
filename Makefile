@@ -13,3 +13,9 @@ clean:
 	rm -f $(PROGRAMS) *.o
 
 new: clean all
+
+hello:
+	emcc hello_sdl.cpp -L -lsdl2 -o build/hello.html
+
+mixier:
+	$(CC) sdlwav.c -L -lsdl2 -o build/hello.html
