@@ -8,6 +8,10 @@
 #include <string.h>
 #include <stdio.h>
 
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#endif
+
 /* set this to any of 512,1024,2048,4096              */
 /* the lower it is, the more FPS shown and CPU needed */
 #define BUFFER 1024
@@ -144,23 +148,12 @@ int main(int argc, char **argv)
 	atexit(SDL_Quit);
 
 	int initted=Mix_Init(0);
-	printf("Before Mix_Init SDL_mixer supported: ");
-	print_init_flags(initted);
+	// printf("Before Mix_Init SDL_mixer supported: ");
+	// print_init_flags(initted);
 	initted=Mix_Init(~0);
-	printf("After  Mix_Init SDL_mixer supported: ");
-	print_init_flags(initted);
+	// printf("After  Mix_Init SDL_mixer supported: ");
+	// print_init_flags(initted);
 	Mix_Quit();
-
-	if(argc<2 || argc>4)
-	{
-		fprintf(stderr,"Usage: %s filename [depth] [any 3rd argument...]\n"
-				"    filename is any music file supported by your SDL_mixer library\n"
-				"    depth is screen depth, default is 8bits\n"
-				"    if there is a third argument given, we go fullscreen for maximum fun!\n",
-				*argv);
-		return 1;
-	}
-
 
 	/* open a screen for the wav output */
 	if(!(s=SDL_SetVideoMode(W,H,(argc>2?atoi(argv[2]):8),(argc>3?SDL_FULLSCREEN:0)|SDL_HWSURFACE|SDL_DOUBLEBUF)))
@@ -178,38 +171,19 @@ int main(int argc, char **argv)
 		cleanExit("Mix_OpenAudio");
 
 	/* we play no samples, so deallocate the default 8 channels... */
-	Mix_AllocateChannels(0);
+	// Mix_AllocateChannels(0);
 	
-	/* print out some info on the formats this run of SDL_mixer supports */
-	{
-		int i,n=Mix_GetNumChunkDecoders();
-		printf("There are %d available chunk(sample) decoders:\n",n);
-		for(i=0; i<n; ++i)
-			printf("	%s\n", Mix_GetChunkDecoder(i));
-		n = Mix_GetNumMusicDecoders();
-		printf("There are %d available music decoders:\n",n);
-		for(i=0; i<n; ++i)
-			printf("	%s\n", Mix_GetMusicDecoder(i));
-	}
-
 	/* print out some info on the audio device and stream */
 	Mix_QuerySpec(&audio_rate, &audio_format, &audio_channels);
 	bits=audio_format&0xFF;
 	sample_size=bits/8+audio_channels;
 	rate=audio_rate;
-	printf("Opened audio at %d Hz %d bit %s, %d bytes audio buffer\n", audio_rate,
-			bits, audio_channels>1?"stereo":"mono", BUFFER );
 
 	/* calculate some parameters for the wav display */
 	dy=s->h/2.0/(float)(0x1<<bits);
 	
-	/* load the song */
-	if(!(music=Mix_LoadMUS(argv[1])))
-		cleanExit("Mix_LoadMUS(\"%s\")",argv[1]);
-
-	// {
-	// 	Mix_MusicType type=Mix_GetMusicType(music);
-	// }
+	if(!(music=Mix_LoadMUS("loop1.wav")))
+		cleanExit("Mix_LoadMUS(\"%s\")","loop1.wav");
 
 	/* set the post mix processor up */
 	Mix_SetPostMix(postmix,argv[1]);
@@ -232,66 +206,6 @@ int main(int argc, char **argv)
 		{
 			switch(e.type)
 			{
-				case SDL_KEYDOWN:
-					switch(e.key.keysym.sym)
-					{
-						case SDLK_ESCAPE:
-							done=1;
-							break;
-						case SDLK_LEFT:
-							if(e.key.keysym.mod&KMOD_SHIFT)
-							{
-								Mix_RewindMusic();
-								position=0;
-							}
-							else
-							{
-								int pos=position/audio_rate-1;
-								if(pos<0)
-									pos=0;
-								Mix_SetMusicPosition(pos);
-								position=pos*audio_rate;
-							}
-							break;
-						case SDLK_RIGHT:
-							switch(Mix_GetMusicType(NULL))
-							{
-								case MUS_MP3:
-									Mix_SetMusicPosition(+5);
-									position+=5*audio_rate;
-									break;
-								case MUS_OGG:
-								case MUS_FLAC:
-								case MUS_MP3_MAD:
-								/*case MUS_MOD_MODPLUG:*/
-									Mix_SetMusicPosition(position/audio_rate+1);
-									position+=audio_rate;
-									break;
-								default:
-									printf("cannot fast-forward this type of music\n");
-									break;
-							}
-							break;
-						case SDLK_UP:
-							volume=(volume+1)<<1;
-							if(volume>SDL_MIX_MAXVOLUME)
-								volume=SDL_MIX_MAXVOLUME;
-							Mix_VolumeMusic(volume);
-							break;
-						case SDLK_DOWN:
-							volume>>=1;
-							Mix_VolumeMusic(volume);
-							break;
-						case SDLK_SPACE:
-							if(Mix_PausedMusic())
-								Mix_ResumeMusic();
-							else
-								Mix_PauseMusic();
-							break;
-						default:
-							break;
-					}
-					break;
 				case SDL_QUIT:
 					done=1;
 					break;

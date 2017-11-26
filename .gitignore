@@ -1,3 +1,5 @@
 *.out
 build
 !.gitkeep
+*.dSYM
+.DS_Store
